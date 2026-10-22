@@ -32,17 +32,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout AbyssalReverbAudioProcessor:
     using namespace juce;
     std::vector<std::unique_ptr<RangedAudioParameter>> p;
 
-    // Форматирование 0.0..1.0 -> 0%..100%
     auto percentAttrs = AudioParameterFloatAttributes()
         .withStringFromValueFunction([](float v, int) { return String(static_cast<int>(std::round(v * 100.0f))) + " %"; })
         .withValueFromStringFunction([](const String& t) { return t.retainCharacters("0123456789.,-").getFloatValue() * 0.01f; });
 
-    // Форматирование секунд (например, 7.00 s)
     auto secondsAttrs = AudioParameterFloatAttributes()
         .withStringFromValueFunction([](float v, int) { return String(v, 2) + " s"; })
         .withValueFromStringFunction([](const String& t) { return t.retainCharacters("0123456789.,-").getFloatValue(); });
 
-    // Форматирование частоты среза (Hz)
     auto hzAttrs = AudioParameterFloatAttributes()
         .withStringFromValueFunction([](float v, int) { return String(static_cast<int>(std::round(v))) + " Hz"; })
         .withValueFromStringFunction([](const String& t) { return t.retainCharacters("0123456789.,-").getFloatValue(); });
@@ -139,9 +136,9 @@ void AbyssalReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     float stereoWidth = width;
     switch (mode)
     {
-        case 1: decayScale = 1.28f; damp *= 0.72f; break; // Artifact
-        case 2: decayScale = 0.82f; damp *= 0.42f; stereoWidth = juce::jmin(2.0f, width * 1.45f); break; // Mirror
-        case 3: decayScale = 1.55f; damp = juce::jmax(0.05f, damping * 0.62f); stereoWidth = juce::jmin(2.0f, width * 1.2f); break; // Rift
+        case 1: decayScale = 1.28f; damp *= 0.72f; break;
+        case 2: decayScale = 0.82f; damp *= 0.42f; stereoWidth = juce::jmin(2.0f, width * 1.45f); break;
+        case 3: decayScale = 1.55f; damp = juce::jmax(0.05f, damping * 0.62f); stereoWidth = juce::jmin(2.0f, width * 1.2f); break;
         default: break;
     }
 
@@ -178,3 +175,54 @@ void AbyssalReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     auto reverbBlock = juce::dsp::AudioBlock<float>(buffer)
                            .getSubsetChannelBlock(0, static_cast<size_t>(channels));
+    juce::dsp::ProcessContextReplacing<float> reverbContext(reverbBlock);
+    reverb.process(reverbContext);
+
+    const float modeToneScale = (mode == 2) ? 1.0f : ((mode == 3) ? 0.72f : ((mode == 1) ? 0.86f : 0.92f));
+    const float cutoff = juce::jlimit(300.0f, 20000.0f, tone * modeToneScale);
+    toneFilterL.setCutoffFrequency(cutoff);
+    toneFilterR.setCutoffFrequency(cutoff);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        const float wet = wetSmoothed.getNextValue();
+        const float dry = 1.0f - wet;
+        const float wetL = toneFilterL.processSample(0, buffer.getSample(0, i));
+        const float dryL = dryBuffer.getSample(0, i);
+        buffer.setSample(0, i, dryL * dry + wetL * wet);
+        if (channels > 1)
+        {
+            const float wetR = toneFilterR.processSample(0, buffer.getSample(1, i));
+            const float dryR = dryBuffer.getSample(1, i);
+            buffer.setSample(1, i, dryR * dry + wetR * wet);
+        }
+    }
+
+    const float makeupGain = juce::jlimit(0.5f, 1.0f, 1.0f - drive * 0.12f);
+    for (int ch = 0; ch < channels; ++ch)
+        buffer.applyGain(ch, 0, numSamples, makeupGain);
+}
+
+juce::AudioProcessorEditor* AbyssalReverbAudioProcessor::createEditor()
+{
+    return new AbyssalReverbAudioProcessorEditor(*this);
+}
+
+void AbyssalReverbAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+{
+    auto state = parameters.copyState();
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
+}
+
+void AbyssalReverbAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+{
+    std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data, sizeInBytes));
+    if (xml != nullptr && xml->hasTagName(parameters.state.getType()))
+        parameters.replaceState(juce::ValueTree::fromXml(*xml));
+}
+
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new AbyssalReverbAudioProcessor();
+}
