@@ -6,7 +6,6 @@ AbyssalReverbAudioProcessorEditor::AbyssalReverbAudioProcessorEditor(AbyssalReve
     setLookAndFeel(&crimsonLookAndFeel);
     setSize(740, 410);
 
-    // Лаконичный заголовок без слов Lair и Dark catacomb reverberator
     title.setText("ABYSSAL", juce::dontSendNotification);
     title.setFont(juce::Font(juce::FontOptions(28.0f, juce::Font::bold)));
     title.setColour(juce::Label::textColourId, juce::Colour(0xffdc1e28));
@@ -16,16 +15,14 @@ AbyssalReverbAudioProcessorEditor::AbyssalReverbAudioProcessorEditor(AbyssalReve
     const auto crimsonBright = juce::Colour(0xffe01e2b);
     const auto crimsonDeep   = juce::Colour(0xffb51621);
 
-    // Настройка всех 7 крутилок с видимыми названиями
-    setupSlider(size,    sizeLabel,    "SIZE",    crimsonBright);
-    setupSlider(decay,   decayLabel,   "DECAY",   crimsonBright);
-    setupSlider(damping, dampingLabel, "DAMPING", crimsonDeep);
-    setupSlider(width,   widthLabel,   "WIDTH",   crimsonDeep);
-    setupSlider(mix,     mixLabel,     "MIX",     crimsonBright);
-    setupSlider(drive,   driveLabel,   "DRIVE",   crimsonBright);
-    setupSlider(tone,    toneLabel,    "TONE",    crimsonDeep);
+    setupSlider(sizeSlider,    sizeLabel,    "SIZE",    crimsonBright);
+    setupSlider(decaySlider,   decayLabel,   "DECAY",   crimsonBright);
+    setupSlider(dampingSlider, dampingLabel, "DAMPING", crimsonDeep);
+    setupSlider(widthSlider,   widthLabel,   "WIDTH",   crimsonDeep);
+    setupSlider(mixSlider,     mixLabel,     "MIX",     crimsonBright);
+    setupSlider(driveSlider,   driveLabel,   "DRIVE",   crimsonBright);
+    setupSlider(toneSlider,    toneLabel,    "TONE",    crimsonDeep);
 
-    // Заголовок над окружностью выбора характера справа
     modeLabel.setText("CHARACTER", juce::dontSendNotification);
     modeLabel.setFont(juce::Font(juce::FontOptions(13.0f, juce::Font::bold)));
     modeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffe01e2b));
@@ -39,13 +36,13 @@ AbyssalReverbAudioProcessorEditor::AbyssalReverbAudioProcessorEditor(AbyssalReve
         addAndMakeVisible(*characterWheel);
     }
 
-    sizeAttachment    = std::make_unique<SliderAttachment>(state, "size", size);
-    decayAttachment   = std::make_unique<SliderAttachment>(state, "decay", decay);
-    dampingAttachment = std::make_unique<SliderAttachment>(state, "damping", damping);
-    widthAttachment   = std::make_unique<SliderAttachment>(state, "width", width);
-    mixAttachment     = std::make_unique<SliderAttachment>(state, "mix", mix);
-    driveAttachment   = std::make_unique<SliderAttachment>(state, "drive", drive);
-    toneAttachment    = std::make_unique<SliderAttachment>(state, "tone", tone);
+    sizeAttachment    = std::make_unique<SliderAttachment>(state, "size", sizeSlider);
+    decayAttachment   = std::make_unique<SliderAttachment>(state, "decay", decaySlider);
+    dampingAttachment = std::make_unique<SliderAttachment>(state, "damping", dampingSlider);
+    widthAttachment   = std::make_unique<SliderAttachment>(state, "width", widthSlider);
+    mixAttachment     = std::make_unique<SliderAttachment>(state, "mix", mixSlider);
+    driveAttachment   = std::make_unique<SliderAttachment>(state, "drive", driveSlider);
+    toneAttachment    = std::make_unique<SliderAttachment>(state, "tone", toneSlider);
 }
 
 AbyssalReverbAudioProcessorEditor::~AbyssalReverbAudioProcessorEditor()
@@ -77,27 +74,22 @@ void AbyssalReverbAudioProcessorEditor::setupSlider(juce::Slider& slider, juce::
 
 void AbyssalReverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // Обсидианово-чёрный фон
     g.fillAll(juce::Colour(0xff060405));
 
     auto outer = getLocalBounds().toFloat().reduced(10.0f);
     g.setColour(juce::Colour(0xff0c0709));
     g.fillRect(outer);
 
-    // Двойная кроваво-красная рамка корпуса
     g.setColour(juce::Colour(0xff9e1620));
     g.drawRect(outer, 1.5f);
     g.setColour(juce::Colour(0xff450b10));
     g.drawRect(outer.reduced(4.0f), 1.0f);
 
-    // Горизонтальная линия под заголовком
     g.setColour(juce::Colour(0xff7a121b));
     g.drawLine(24.0f, 62.0f, static_cast<float>(getWidth() - 24), 62.0f, 1.2f);
 
-    // Левые отсеки для крутилок
     auto topBox = juce::Rectangle<float>(24.0f, 76.0f, 476.0f, 150.0f);
     auto botBox = juce::Rectangle<float>(24.0f, 238.0f, 476.0f, 150.0f);
-    // Правый отсек для кругового селектора CHARACTER
     auto rightBox = juce::Rectangle<float>(512.0f, 76.0f, 204.0f, 312.0f);
 
     g.setColour(juce::Colour(0xff090506));
@@ -121,4 +113,21 @@ void AbyssalReverbAudioProcessorEditor::resized()
         slider.setBounds(x, y + 18, w, h - 18);
     };
 
-    const int knob
+    const int knobW = 112;
+    const int knobH = 132;
+
+    const int topY = 84;
+    placeKnob(sizeSlider,    sizeLabel,    32,  topY, knobW, knobH);
+    placeKnob(decaySlider,   decayLabel,   148, topY, knobW, knobH);
+    placeKnob(dampingSlider, dampingLabel, 264, topY, knobW, knobH);
+    placeKnob(widthSlider,   widthLabel,   380, topY, knobW, knobH);
+
+    const int botY = 246;
+    placeKnob(mixSlider,   mixLabel,   72,  botY, knobW, knobH);
+    placeKnob(driveSlider, driveLabel, 206, botY, knobW, knobH);
+    placeKnob(toneSlider,  toneLabel,  340, botY, knobW, knobH);
+
+    modeLabel.setBounds(512, 92, 204, 22);
+    if (characterWheel != nullptr)
+        characterWheel->setBounds(514, 120, 200, 250);
+}
