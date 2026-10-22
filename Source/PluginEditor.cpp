@@ -3,85 +3,153 @@
 AbyssalReverbAudioProcessorEditor::AbyssalReverbAudioProcessorEditor(AbyssalReverbAudioProcessor& p)
     : AudioProcessorEditor(&p), processor(p)
 {
-    setSize(620, 390);
-    title.setText("ABYSSAL", juce::dontSendNotification);
-    title.setFont(juce::Font(juce::FontOptions(29.0f, juce::Font::bold)));
-    title.setColour(juce::Label::textColourId, juce::Colour(0xfff0e9e4));
+    setLookAndFeel(&lairLookAndFeel);
+    setSize(660, 420);
+
+    title.setText("ABYSSAL // LAIR", juce::dontSendNotification);
+    title.setFont(juce::Font(juce::FontOptions(24.0f, juce::Font::bold)));
+    title.setColour(juce::Label::textColourId, juce::Colour(0xffece4d0));
     title.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(title);
 
-    subtitle.setText("EXPERIMENTAL SPACE / REVERB LAB", juce::dontSendNotification);
-    subtitle.setFont(juce::Font(juce::FontOptions(10.5f, juce::Font::plain)));
-    subtitle.setColour(juce::Label::textColourId, juce::Colour(0xffa69ba8));
+    subtitle.setText("DARK CATACOMB REVERBERATOR", juce::dontSendNotification);
+    subtitle.setFont(juce::Font(juce::FontOptions(10.5f, juce::Font::bold)));
+    subtitle.setColour(juce::Label::textColourId, juce::Colour(0xffc8a464));
     subtitle.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(subtitle);
 
-    setupSlider(size, "SIZE"); setupSlider(decay, "DECAY"); setupSlider(damping, "DAMPING");
-    setupSlider(width, "WIDTH"); setupSlider(mix, "MIX"); setupSlider(drive, "DRIVE"); setupSlider(tone, "TONE");
-    mode.addItem("SPACE", 1); mode.addItem("ARTIFACT", 2); mode.addItem("MIRROR", 3); mode.addItem("RIFT", 4);
-    mode.setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff24202b));
-    mode.setColour(juce::ComboBox::textColourId, juce::Colour(0xfff0e9e4));
-    mode.setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff6e596f));
+    const auto goldAccent  = juce::Colour(0xffd4af6a); // Янтарно-золотой (как в секции пространства Lair)
+    const auto eerieAccent = juce::Colour(0xff7ec4a8); // Призрачно-бирюзовый (для модуляции/окраса)
+    const auto bloodAccent = juce::Colour(0xffcf6a62); // Тускло-багровый (для сатурации и микса)
+
+    // Инициализация каждой крутилки вместе с видимой текстовой подписью
+    setupSlider(size,    sizeLabel,    "SIZE",    goldAccent);
+    setupSlider(decay,   decayLabel,   "DECAY",   goldAccent);
+    setupSlider(damping, dampingLabel, "DAMPING", goldAccent);
+    setupSlider(width,   widthLabel,   "WIDTH",   eerieAccent);
+    setupSlider(mix,     mixLabel,     "MIX",     bloodAccent);
+    setupSlider(drive,   driveLabel,   "DRIVE",   bloodAccent);
+    setupSlider(tone,    toneLabel,    "TONE",    eerieAccent);
+
+    mode.addItem("SPACE", 1);
+    mode.addItem("ARTIFACT", 2);
+    mode.addItem("MIRROR", 3);
+    mode.addItem("RIFT", 4);
     addAndMakeVisible(mode);
-    modeLabel.setText("CHARACTER", juce::dontSendNotification);
-    modeLabel.setFont(juce::Font(juce::FontOptions(10.0f, juce::Font::bold)));
-    modeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffb6a8b8));
+
+    modeLabel.setText("REALM / ARTIFACT", juce::dontSendNotification);
+    modeLabel.setFont(juce::Font(juce::FontOptions(10.5f, juce::Font::bold)));
+    modeLabel.setColour(juce::Label::textColourId, juce::Colour(0xffc8a464));
+    modeLabel.setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(modeLabel);
 
     auto& state = processor.parameters;
-    sizeAttachment = std::make_unique<SliderAttachment>(state, "size", size);
-    decayAttachment = std::make_unique<SliderAttachment>(state, "decay", decay);
+    sizeAttachment    = std::make_unique<SliderAttachment>(state, "size", size);
+    decayAttachment   = std::make_unique<SliderAttachment>(state, "decay", decay);
     dampingAttachment = std::make_unique<SliderAttachment>(state, "damping", damping);
-    widthAttachment = std::make_unique<SliderAttachment>(state, "width", width);
-    mixAttachment = std::make_unique<SliderAttachment>(state, "mix", mix);
-    driveAttachment = std::make_unique<SliderAttachment>(state, "drive", drive);
-    toneAttachment = std::make_unique<SliderAttachment>(state, "tone", tone);
-    modeAttachment = std::make_unique<ComboAttachment>(state, "mode", mode);
+    widthAttachment   = std::make_unique<SliderAttachment>(state, "width", width);
+    mixAttachment     = std::make_unique<SliderAttachment>(state, "mix", mix);
+    driveAttachment   = std::make_unique<SliderAttachment>(state, "drive", drive);
+    toneAttachment    = std::make_unique<SliderAttachment>(state, "tone", tone);
+    modeAttachment    = std::make_unique<ComboAttachment>(state, "mode", mode);
 }
 
-void AbyssalReverbAudioProcessorEditor::setupSlider(juce::Slider& slider, const juce::String& labelText)
+AbyssalReverbAudioProcessorEditor::~AbyssalReverbAudioProcessorEditor()
+{
+    setLookAndFeel(nullptr);
+}
+
+void AbyssalReverbAudioProcessorEditor::setupSlider(juce::Slider& slider, juce::Label& label,
+                                                    const juce::String& labelText, juce::Colour accentColour)
 {
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 76, 20);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 72, 18);
     slider.setName(labelText);
-    slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour(0xffd28cba));
-    slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff403444));
-    slider.setColour(juce::Slider::thumbColourId, juce::Colour(0xffffd7a1));
-    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xfff0e9e4));
-    slider.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff201c26));
-    slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colour(0xff403444));
+
+    slider.setColour(juce::Slider::rotarySliderFillColourId, accentColour);
+    slider.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff2c2930));
+    slider.setColour(juce::Slider::thumbColourId, juce::Colour(0xffece4d0));
+    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffece4d0));
+    slider.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff111014));
+    slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colour(0xff38333d));
     addAndMakeVisible(slider);
+
+    // Настройка видимого названия крутилки
+    label.setText(labelText, juce::dontSendNotification);
+    label.setFont(juce::Font(juce::FontOptions(12.0f, juce::Font::bold)));
+    label.setColour(juce::Label::textColourId, juce::Colour(0xffece4d0));
+    label.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(label);
 }
 
 void AbyssalReverbAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff121018));
-    g.setGradientFill(juce::ColourGradient(juce::Colour(0xff302033), 0.0f, 0.0f,
-                                           juce::Colour(0xff121018), 620.0f, 390.0f, false));
-    g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(8.0f), 12.0f);
-    g.setColour(juce::Colour(0xff5a405d));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(8.0f), 12.0f, 1.0f);
-    g.setColour(juce::Colour(0xff5a405d).withAlpha(0.55f));
-    g.drawLine(26.0f, 82.0f, 594.0f, 82.0f, 1.0f);
-    g.setColour(juce::Colour(0xffd28cba).withAlpha(0.13f));
-    g.fillEllipse(490.0f, 12.0f, 105.0f, 65.0f);
+    // Глубокий угольный фон в стиле Aberrant DSP
+    g.fillAll(juce::Colour(0xff0e0d10));
+
+    auto outer = getLocalBounds().toFloat().reduced(10.0f);
+    g.setColour(juce::Colour(0xff161419));
+    g.fillRect(outer);
+
+    // Двойная контрастная рамка (кремовая + золотая)
+    g.setColour(juce::Colour(0xffece4d0).withAlpha(0.75f));
+    g.drawRect(outer, 1.5f);
+    g.setColour(juce::Colour(0xffc8a464).withAlpha(0.35f));
+    g.drawRect(outer.reduced(4.0f), 1.0f);
+
+    // Разделитель шапки
+    g.setColour(juce::Colour(0xffece4d0).withAlpha(0.45f));
+    g.drawLine(22.0f, 76.0f, static_cast<float>(getWidth() - 22), 76.0f, 1.2f);
+
+    // Секционные рамки (верхний блок CHAMBERS и нижний блок ALCHEMY & OUTPUT)
+    auto topBox = juce::Rectangle<float>(24.0f, 90.0f, static_cast<float>(getWidth() - 48), 152.0f);
+    auto botBox = juce::Rectangle<float>(24.0f, 254.0f, static_cast<float>(getWidth() - 48), 144.0f);
+
+    g.setColour(juce::Colour(0xff121015));
+    g.fillRect(topBox);
+    g.fillRect(botBox);
+
+    g.setColour(juce::Colour(0xffc8a464).withAlpha(0.4f));
+    g.drawRect(topBox, 1.0f);
+    g.drawRect(botBox, 1.0f);
+
+    // Декоративный оккультный символ в шапке (в духе графики Lair)
+    const float cx = 345.0f, cy = 43.0f;
+    g.setColour(juce::Colour(0xffc8a464).withAlpha(0.5f));
+    g.drawEllipse(cx - 18.0f, cy - 18.0f, 36.0f, 36.0f, 1.2f);
+    g.drawEllipse(cx - 8.0f, cy - 8.0f, 16.0f, 16.0f, 1.2f);
+    g.drawLine(cx - 26.0f, cy, cx + 26.0f, cy, 1.0f);
+    g.drawLine(cx, cy - 24.0f, cx, cy + 24.0f, 1.0f);
 }
 
 void AbyssalReverbAudioProcessorEditor::resized()
 {
-    title.setBounds(28, 19, 220, 37);
-    subtitle.setBounds(30, 54, 300, 18);
-    modeLabel.setBounds(398, 27, 100, 18);
-    mode.setBounds(398, 46, 180, 27);
+    title.setBounds(26, 18, 280, 30);
+    subtitle.setBounds(28, 46, 280, 18);
 
-    const int top = 105;
-    const int w = 140;
-    const int h = 125;
-    size.setBounds(28, top, w, h);
-    decay.setBounds(178, top, w, h);
-    damping.setBounds(328, top, w, h);
-    width.setBounds(478, top, 112, h);
-    mix.setBounds(78, 245, w, h);
-    drive.setBounds(238, 245, w, h);
-    tone.setBounds(398, 245, w, h);
+    modeLabel.setBounds(440, 20, 190, 16);
+    mode.setBounds(450, 40, 180, 26);
+
+    // Вспомогательная лямбда: размещает название ровно над крутилкой
+    auto placeKnob = [](juce::Slider& slider, juce::Label& label, int x, int y, int w, int h)
+    {
+        label.setBounds(x, y, w, 20);
+        slider.setBounds(x, y + 20, w, h - 20);
+    };
+
+    // Верхний ряд: 4 крутилки (SIZE, DECAY, DAMPING, WIDTH)
+    const int topY = 98;
+    const int knobW = 140;
+    const int knobH = 136;
+
+    placeKnob(size,    sizeLabel,    34,  topY, knobW, knobH);
+    placeKnob(decay,   decayLabel,   184, topY, knobW, knobH);
+    placeKnob(damping, dampingLabel, 334, topY, knobW, knobH);
+    placeKnob(width,   widthLabel,   484, topY, knobW, knobH);
+
+    // Нижний ряд: 3 крутилки (MIX, DRIVE, TONE)
+    const int botY = 260;
+    placeKnob(mix,   mixLabel,   95,  botY, knobW, knobH);
+    placeKnob(drive, driveLabel, 260, botY, knobW, knobH);
+    placeKnob(tone,  toneLabel,  425, botY, knobW, knobH);
 }
