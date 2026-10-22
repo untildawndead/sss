@@ -85,7 +85,7 @@ public:
     {
         auto bounds = getLocalBounds().toFloat();
         const auto centre = bounds.getCentre();
-        const float ringRadius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.30f;
+        const float ringRadius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.28f;
 
         g.setColour(juce::Colour(0xff160709));
         g.fillEllipse(centre.x - ringRadius - 10.0f, centre.y - ringRadius - 10.0f,
@@ -95,8 +95,8 @@ public:
         g.drawEllipse(centre.x - ringRadius - 10.0f, centre.y - ringRadius - 10.0f,
                       (ringRadius + 10.0f) * 2.0f, (ringRadius + 10.0f) * 2.0f, 1.0f);
 
-        g.setColour(juce::Colour(0xff9e1922));
-        g.drawEllipse(centre.x - ringRadius, centre.y - ringRadius, ringRadius * 2.0f, ringRadius * 2.0f, 1.8f);
+        g.setColour(juce::Colour(0xffb01c26));
+        g.drawEllipse(centre.x - ringRadius, centre.y - ringRadius, ringRadius * 2.0f, ringRadius * 2.0f, 2.0f);
 
         const float innerR = ringRadius * 0.45f;
         g.setColour(juce::Colour(0xff090405));
@@ -128,11 +128,11 @@ public:
         needle.startNewSubPath(0.0f, 8.0f);
         needle.lineTo(0.0f, -ringRadius + 4.0f);
         g.setColour(juce::Colour(0xffff2432));
-        g.strokePath(needle, juce::PathStrokeType(2.4f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded),
+        g.strokePath(needle, juce::PathStrokeType(2.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded),
                      juce::AffineTransform::rotation(activeAngle).translated(centre.x, centre.y));
 
         g.setColour(juce::Colour(0xffff2432));
-        g.fillEllipse(centre.x - 4.0f, centre.y - 4.0f, 8.0f, 8.0f);
+        g.fillEllipse(centre.x - 4.5f, centre.y - 4.5f, 9.0f, 9.0f);
 
         g.setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
         for (int i = 0; i < 4; ++i)
@@ -157,97 +157,13 @@ public:
             }
 
             juce::Rectangle<float> textRect;
-            if (i == 0)      textRect = { centre.x - 45.0f, ny - 32.0f, 90.0f, 18.0f };
-            else if (i == 1) textRect = { nx + 12.0f,       ny - 9.0f,  72.0f, 18.0f };
-            else if (i == 2) textRect = { centre.x - 45.0f, ny + 14.0f, 90.0f, 18.0f };
-            else             textRect = { nx - 82.0f,       ny - 9.0f,  70.0f, 18.0f };
+            if (i == 0)      textRect = { centre.x - 45.0f, ny - 30.0f, 90.0f, 18.0f };
+            else if (i == 1) textRect = { nx + 10.0f,       ny - 9.0f,  66.0f, 18.0f };
+            else if (i == 2) textRect = { centre.x - 45.0f, ny + 12.0f, 90.0f, 18.0f };
+            else             textRect = { nx - 76.0f,       ny - 9.0f,  66.0f, 18.0f };
 
-            g.setColour(isSelected ? juce::Colour(0xffff3844) : juce::Colour(0xff9e7b7e));
+            g.setColour(isSelected ? juce::Colour(0xffff3844) : juce::Colour(0xffb58d91));
             const auto just = (i == 1) ? juce::Justification::centredLeft
                             : (i == 3) ? juce::Justification::centredRight
                                        : juce::Justification::centred;
             g.drawText(names[i], textRect, just, false);
-        }
-    }
-
-    void mouseDown(const juce::MouseEvent& e) override
-    {
-        attachment.beginGesture();
-        selectFromMouse(e.position, false);
-    }
-
-    void mouseDrag(const juce::MouseEvent& e) override
-    {
-        selectFromMouse(e.position, false);
-    }
-
-    void mouseUp(const juce::MouseEvent&) override
-    {
-        attachment.endGesture();
-    }
-
-    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& wheel) override
-    {
-        if (std::abs(wheel.deltaY) < 0.001f) return;
-        const int dir = (wheel.deltaY > 0.0f) ? 1 : -1;
-        const int next = (currentIndex + dir + 4) % 4;
-        attachment.setValueAsCompleteGesture(static_cast<float>(next));
-    }
-
-private:
-    void selectFromMouse(juce::Point<float> pos, bool completeGesture)
-    {
-        const auto centre = getLocalBounds().toFloat().getCentre();
-        const float dx = pos.x - centre.x;
-        const float dy = pos.y - centre.y;
-
-        int selected = 0;
-        if (std::abs(dx) > std::abs(dy))
-            selected = (dx > 0.0f) ? 1 : 3;
-        else
-            selected = (dy > 0.0f) ? 2 : 0;
-
-        if (selected != currentIndex)
-        {
-            if (completeGesture)
-                attachment.setValueAsCompleteGesture(static_cast<float>(selected));
-            else
-                attachment.setValueAsPartOfGesture(static_cast<float>(selected));
-        }
-    }
-
-    void updateIndex(int idx)
-    {
-        currentIndex = juce::jlimit(0, 3, idx);
-        repaint();
-    }
-
-    juce::ParameterAttachment attachment;
-    int currentIndex = 0;
-};
-
-class AbyssalReverbAudioProcessorEditor final : public juce::AudioProcessorEditor
-{
-public:
-    explicit AbyssalReverbAudioProcessorEditor(AbyssalReverbAudioProcessor&);
-    ~AbyssalReverbAudioProcessorEditor() override;
-    void paint(juce::Graphics&) override;
-    void resized() override;
-
-private:
-    using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
-
-    AbyssalReverbAudioProcessor& processor;
-    CrimsonLookAndFeel crimsonLookAndFeel;
-
-    juce::Label title, modeLabel;
-    juce::Slider sizeSlider, decaySlider, dampingSlider, widthSlider, mixSlider, driveSlider, toneSlider;
-    juce::Label sizeLabel, decayLabel, dampingLabel, widthLabel, mixLabel, driveLabel, toneLabel;
-
-    std::unique_ptr<CharacterWheel> characterWheel;
-    std::unique_ptr<SliderAttachment> sizeAttachment, decayAttachment, dampingAttachment,
-        widthAttachment, mixAttachment, driveAttachment, toneAttachment;
-
-    void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText, juce::Colour accentColour);
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AbyssalReverbAudioProcessorEditor)
-};
