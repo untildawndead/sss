@@ -36,6 +36,8 @@ target_sources(AbyssalReverb PRIVATE
 )
 
 target_compile_features(AbyssalReverb PRIVATE cxx_std_17)
+target_compile_options(AbyssalReverb PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
 target_compile_definitions(AbyssalReverb PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
