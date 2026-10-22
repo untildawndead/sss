@@ -4,7 +4,6 @@ AbyssalReverbAudioProcessorEditor::AbyssalReverbAudioProcessorEditor(AbyssalReve
     : AudioProcessorEditor(&p), processor(p)
 {
     setLookAndFeel(&crimsonLookAndFeel);
-    setSize(740, 410);
 
     title.setText("ABYSSAL", juce::dontSendNotification);
     title.setFont(juce::Font(juce::FontOptions(28.0f, juce::Font::bold)));
@@ -43,6 +42,9 @@ AbyssalReverbAudioProcessorEditor::AbyssalReverbAudioProcessorEditor(AbyssalReve
     mixAttachment     = std::make_unique<SliderAttachment>(state, "mix", mixSlider);
     driveAttachment   = std::make_unique<SliderAttachment>(state, "drive", driveSlider);
     toneAttachment    = std::make_unique<SliderAttachment>(state, "tone", toneSlider);
+
+    // ВАЖНО: setSize вызывается ПОСЛЕ инициализации всех компонентов (включая characterWheel)
+    setSize(740, 410);
 }
 
 AbyssalReverbAudioProcessorEditor::~AbyssalReverbAudioProcessorEditor()
@@ -54,7 +56,7 @@ void AbyssalReverbAudioProcessorEditor::setupSlider(juce::Slider& slider, juce::
                                                     const juce::String& labelText, juce::Colour accentColour)
 {
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 68, 18);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 72, 18);
     slider.setName(labelText);
 
     slider.setColour(juce::Slider::rotarySliderFillColourId, accentColour);
@@ -122,12 +124,4 @@ void AbyssalReverbAudioProcessorEditor::resized()
     placeKnob(dampingSlider, dampingLabel, 264, topY, knobW, knobH);
     placeKnob(widthSlider,   widthLabel,   380, topY, knobW, knobH);
 
-    const int botY = 246;
-    placeKnob(mixSlider,   mixLabel,   72,  botY, knobW, knobH);
-    placeKnob(driveSlider, driveLabel, 206, botY, knobW, knobH);
-    placeKnob(toneSlider,  toneLabel,  340, botY, knobW, knobH);
-
-    modeLabel.setBounds(512, 92, 204, 22);
-    if (characterWheel != nullptr)
-        characterWheel->setBounds(514, 120, 200, 250);
-}
+    const int botY =
