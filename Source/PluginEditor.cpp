@@ -43,7 +43,6 @@ AbyssalReverbAudioProcessorEditor::AbyssalReverbAudioProcessorEditor(AbyssalReve
     driveAttachment   = std::make_unique<SliderAttachment>(state, "drive", driveSlider);
     toneAttachment    = std::make_unique<SliderAttachment>(state, "tone", toneSlider);
 
-    // ВАЖНО: setSize вызывается ПОСЛЕ инициализации всех компонентов (включая characterWheel)
     setSize(740, 410);
 }
 
@@ -124,4 +123,12 @@ void AbyssalReverbAudioProcessorEditor::resized()
     placeKnob(dampingSlider, dampingLabel, 264, topY, knobW, knobH);
     placeKnob(widthSlider,   widthLabel,   380, topY, knobW, knobH);
 
-    const int botY =
+    const int botY = 246;
+    placeKnob(mixSlider,   mixLabel,   72,  botY, knobW, knobH);
+    placeKnob(driveSlider, driveLabel, 206, botY, knobW, knobH);
+    placeKnob(toneSlider,  toneLabel,  340, botY, knobW, knobH);
+
+    modeLabel.setBounds(512, 92, 204, 22);
+    if (characterWheel != nullptr)
+        characterWheel->setBounds(514, 120, 200, 250);
+}
