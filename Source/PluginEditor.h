@@ -167,3 +167,87 @@ public:
                             : (i == 3) ? juce::Justification::centredRight
                                        : juce::Justification::centred;
             g.drawText(names[i], textRect, just, false);
+        }
+    }
+
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        attachment.beginGesture();
+        selectFromMouse(e.position, false);
+    }
+
+    void mouseDrag(const juce::MouseEvent& e) override
+    {
+        selectFromMouse(e.position, false);
+    }
+
+    void mouseUp(const juce::MouseEvent&) override
+    {
+        attachment.endGesture();
+    }
+
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& wheel) override
+    {
+        if (std::abs(wheel.deltaY) < 0.001f) return;
+        const int dir = (wheel.deltaY > 0.0f) ? 1 : -1;
+        const int next = (currentIndex + dir + 4) % 4;
+        attachment.setValueAsCompleteGesture(static_cast<float>(next));
+    }
+
+private:
+    void selectFromMouse(juce::Point<float> pos, bool completeGesture)
+    {
+        const auto centre = getLocalBounds().toFloat().getCentre();
+        const float dx = pos.x - centre.x;
+        const float dy = pos.y - centre.y;
+
+        int selected = 0;
+        if (std::abs(dx) > std::abs(dy))
+            selected = (dx > 0.0f) ? 1 : 3;
+        else
+            selected = (dy > 0.0f) ? 2 : 0;
+
+        if (selected != currentIndex)
+        {
+            if (completeGesture)
+                attachment.setValueAsCompleteGesture(static_cast<float>(selected));
+            else
+                attachment.setValueAsPartOfGesture(static_cast<float>(selected));
+        }
+    }
+
+    void updateIndex(int idx)
+    {
+        currentIndex = juce::jlimit(0, 3, idx);
+        repaint();
+    }
+
+    juce::ParameterAttachment attachment;
+    int currentIndex = 0;
+};
+
+class AbyssalReverbAudioProcessorEditor final : public juce::AudioProcessorEditor
+{
+public:
+    explicit AbyssalReverbAudioProcessorEditor(AbyssalReverbAudioProcessor&);
+    ~AbyssalReverbAudioProcessorEditor() override;
+    void paint(juce::Graphics&) override;
+    void resized() override;
+
+private:
+    using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+
+    AbyssalReverbAudioProcessor& processor;
+    CrimsonLookAndFeel crimsonLookAndFeel;
+
+    juce::Label title, modeLabel;
+    juce::Slider sizeSlider, decaySlider, dampingSlider, widthSlider, mixSlider, driveSlider, toneSlider;
+    juce::Label sizeLabel, decayLabel, dampingLabel, widthLabel, mixLabel, driveLabel, toneLabel;
+
+    std::unique_ptr<CharacterWheel> characterWheel;
+    std::unique_ptr<SliderAttachment> sizeAttachment, decayAttachment, dampingAttachment,
+        widthAttachment, mixAttachment, driveAttachment, toneAttachment;
+
+    void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText, juce::Colour accentColour);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AbyssalReverbAudioProcessorEditor)
+};
