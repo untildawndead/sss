@@ -45,23 +45,24 @@ juce::AudioProcessorValueTreeState::ParameterLayout AbyssalReverbAudioProcessor:
 
 void AbyssalReverbAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    currentSampleRate = sampleRate;
     juce::dsp::ProcessSpec spec { sampleRate, static_cast<juce::uint32>(samplesPerBlock), 2 };
-    // juce::dsp::Reverb must be prepared with the current sample rate and block size.
     reverb.prepare(spec);
     reverb.reset();
     reverb.setParameters(reverbParams);
+
     toneFilterL.prepare(spec);
     toneFilterR.prepare(spec);
     toneFilterL.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
     toneFilterR.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
     toneFilterL.reset();
     toneFilterR.reset();
+
     wetSmoothed.reset(sampleRate, 0.025);
     driveSmoothed.reset(sampleRate, 0.025);
     wetSmoothed.setCurrentAndTargetValue(getParam(parameters, mixID));
     driveSmoothed.setCurrentAndTargetValue(getParam(parameters, driveID));
-    dryBuffer.setSize(2, samplesPerBlock);
+
+    dryBuffer.setSize(2, juce::jmax(1, samplesPerBlock), false, false, false);
 }
 
 void AbyssalReverbAudioProcessor::releaseResources()
@@ -83,7 +84,7 @@ void AbyssalReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
     const int channels = juce::jmin(2, buffer.getNumChannels());
     const int numSamples = buffer.getNumSamples();
-    if (channels == 0) return;
+    if (channels == 0 || numSamples == 0) return;
 
     const float size = getParam(parameters, sizeID);
     const float decay = getParam(parameters, decayID);
@@ -94,7 +95,6 @@ void AbyssalReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     const float tone = getParam(parameters, toneID);
     const int mode = static_cast<int>(getParam(parameters, modeID));
 
-    // Each character changes the reverb's density, stereo image and colour.
     float decayScale = 1.0f;
     float damp = damping;
     float stereoWidth = width;
@@ -105,8 +105,7 @@ void AbyssalReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         case 3: decayScale = 1.55f; damp = juce::jmax(0.05f, damping * 0.62f); stereoWidth = juce::jmin(2.0f, width * 1.2f); break; // Rift
         default: break;
     }
-    // JUCE's stock reverb exposes room size rather than seconds of decay, so
-    // combine Size and Decay into a musically useful approximation.
+
     const float room = juce::jlimit(0.05f, 1.0f, 0.10f + size * 0.25f + (decay / 18.0f) * 0.70f * decayScale);
 
     reverbParams.roomSize = room;
@@ -117,39 +116,37 @@ void AbyssalReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     reverbParams.freezeMode = 0.0f;
     reverb.setParameters(reverbParams);
 
-    toneFilterL.setCutoffFrequency(tone);
-    toneFilterR.setCutoffFrequency(tone);
     wetSmoothed.setTargetValue(mix);
     driveSmoothed.setTargetValue(drive);
 
-    dryBuffer.setSize(channels, numSamples, false, false, true);
+    if (dryBuffer.getNumSamples() < numSamples)
+        dryBuffer.setSize(2, numSamples, false, false, true);
+
     for (int ch = 0; ch < channels; ++ch)
         dryBuffer.copyFrom(ch, 0, buffer, ch, 0, numSamples);
 
-    // Drive before the reverb creates a denser, less pristine tail.
     for (int i = 0; i < numSamples; ++i)
     {
         const float d = driveSmoothed.getNextValue();
         const float gain = 1.0f + d * 5.0f;
+        const float norm = (d > 0.001f) ? (1.0f / std::tanh(gain)) : 1.0f;
         for (int ch = 0; ch < channels; ++ch)
         {
             const float x = buffer.getSample(ch, i) * gain;
-            buffer.setSample(ch, i, (d > 0.001f) ? std::tanh(x) / std::tanh(gain) : x);
+            buffer.setSample(ch, i, (d > 0.001f) ? std::tanh(x) * norm : x);
         }
     }
 
-    // JUCE 8's juce::dsp::Reverb uses the DSP ProcessContext API.
-    // The legacy processStereo/processMono methods belong to juce::Reverb,
-    // not juce::dsp::Reverb, and therefore do not compile here.
     auto reverbBlock = juce::dsp::AudioBlock<float>(buffer)
                            .getSubsetChannelBlock(0, static_cast<size_t>(channels));
     juce::dsp::ProcessContextReplacing<float> reverbContext(reverbBlock);
     reverb.process(reverbContext);
 
-    // Character-dependent tail shaping; Mirror is brighter, Rift is darker and more diffuse.
     const float modeToneScale = (mode == 2) ? 1.0f : ((mode == 3) ? 0.72f : ((mode == 1) ? 0.86f : 0.92f));
-    toneFilterL.setCutoffFrequency(juce::jlimit(300.0f, 20000.0f, tone * modeToneScale));
-    toneFilterR.setCutoffFrequency(juce::jlimit(300.0f, 20000.0f, tone * modeToneScale));
+    const float cutoff = juce::jlimit(300.0f, 20000.0f, tone * modeToneScale);
+    toneFilterL.setCutoffFrequency(cutoff);
+    toneFilterR.setCutoffFrequency(cutoff);
+
     for (int i = 0; i < numSamples; ++i)
     {
         const float wet = wetSmoothed.getNextValue();
@@ -165,9 +162,9 @@ void AbyssalReverbAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         }
     }
 
-    // Prevent accidental overload after aggressive drive settings.
+    const float makeupGain = juce::jlimit(0.5f, 1.0f, 1.0f - drive * 0.12f);
     for (int ch = 0; ch < channels; ++ch)
-        buffer.applyGain(juce::jlimit(0.5f, 1.0f, 1.0f - drive * 0.12f));
+        buffer.applyGain(ch, 0, numSamples, makeupGain);
 }
 
 juce::AudioProcessorEditor* AbyssalReverbAudioProcessor::createEditor()
